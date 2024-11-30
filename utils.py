@@ -1,8 +1,20 @@
+# Author: Taylor Seghesio & Garrett Sharp
+# Organization: UNR CSE
+# Course: CS 682
+# date_Updated: 29NOV2024
+
+# imports for data extraction tasks
 import os
 import zipfile
+
+# imports for vision/data handling tasks
 from torchvision import transforms
 from torchvision.datasets import ImageFolder
 from torch.utils.data import DataLoader, random_split
+
+train_loader = None
+val_loader = None
+test_loader = None
 
 
 def extract_data(dataset_dir, extract_to):
@@ -57,14 +69,23 @@ def prepare_data(extracted_data, batch_size):
     return train_loader, val_loader, test_loader
 
 
-if __name__ == '__main__':
+def get_loaders(dataset_path, extract_to, batch_size):
+    extract_data(dataset_path, extract_to)
+    global train_loader, val_loader, test_loader
+    train_loader, val_loader, test_loader = prepare_data(extract_to, batch_size)
+    return train_loader, val_loader, test_loader
 
+
+def main():
     dataset_path = "dataset"
     extract_to = "extracted_dataset"
     batch_size = 32
 
-    extract_data(dataset_path, extract_to)
-    train_loader, val_loader, test_loader = prepare_data(extract_to, batch_size)
+    train_loader, val_loader, test_loader = get_loaders(dataset_path, extract_to, batch_size)
 
     print("Data preparation complete.")
     print(f"Train batches: {len(train_loader)}, Validation batches: {len(val_loader)}, Test batches: {len(test_loader)}")
+
+
+if __name__ == '__main__':
+    main()
