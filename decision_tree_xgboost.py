@@ -6,9 +6,8 @@
 # sources
 # https://pandas.pydata.org/docs/user_guide/index.html#user-guide
 # https://matplotlib.org/stable/tutorials/pyplot.html
-# https://scikit-learn.org/1.5/modules/generated/sklearn.tree.plot_tree.html
 # https://scikit-learn.org/dev/modules/generated/sklearn.metrics.accuracy_score.html
-# https://xgboost.readthedocs.io/en/stable/python/python_intro.html xgboost
+# https://xgboost.readthedocs.io/en/stable/python/python_intro.html
 
 # Acknowledgments: Much of this code was written with the help of provided resources from UNR CS 682 course by Dr. Ankita
 # Shukla, and the course textbook: Artificial Intelligence: A Modern Approach by Stuart Russel and Peter Norvig. My
@@ -19,7 +18,7 @@ import pandas as pd
 from sklearn.tree import DecisionTreeClassifier
 
 import matplotlib.pyplot as plt
-from sklearn.tree import plot_tree
+
 from sklearn.metrics import accuracy_score
 
 
@@ -32,7 +31,7 @@ from utils import get_loaders
 import torch
 
 # GLOBALS
-BATCH_SIZE = 32
+BATCH_SIZE = 128
 
 
 class MyXGBDecisionTree:
@@ -62,7 +61,7 @@ class MyXGBDecisionTree:
             'tree_method': 'hist',
             'device': device,
             'learning_rate': 0.1,
-            'max_depth': 7,
+            'max_depth': 4,
             'reg_alpha': 0.1,
             'reg_lambda': 1.0
         }
@@ -92,12 +91,9 @@ class MyXGBDecisionTree:
 
         return accuracy
 
-    def plot_tree(self):
-        plt.figure(figsize=(40, 20))
-        plot_tree(self.model,
-                  feature_names=['Pregnancies', 'Glucose', 'BloodPressure', 'SkinThickness', 'Insulin', 'BMI',
-                                 'DiabetesPedigreeFunction', 'Age'], class_names=['No Diabetes', 'Diabetes'],
-                  filled=True)
+    def plot_tree(self, num_tree=0):
+        #plt.figure(figsize=(40, 20))
+        xgb.plot_tree(self.model, num_trees=num_tree)
         plt.show()
 
 
