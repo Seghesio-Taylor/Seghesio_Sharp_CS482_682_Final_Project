@@ -1,4 +1,4 @@
-# Author: Taylor Seghesio & Garrett Sharp
+# Authors: Taylor Seghesio & Garrett Sharp
 # Organization: UNR CSE
 # Course: CS 682
 # date_Updated: 30NOV2024
@@ -13,7 +13,7 @@
 # [7]  https://medium.com/@harshit4084/track-your-loop-using-tqdm-7-ways-progress-bars-in-python-make-things-easier-fcbbb9233f24 ### prog bar
 # [8]  https://blog.paperspace.com/how-to-maximize-gpu-utilization-by-finding-the-right-batch-size/ ### helped with accuracy and algorithm performance
 # [9]  https://www.linkedin.com/advice/3/how-can-you-improve-neural-network-performance-xkrxe#:~:text=Selecting%20the%20number%20of%20epochs,it%20based%20on%20validation%20performance. ###help with accuracy and curve performance
-
+# [10] https://pytorch.org/tutorials/recipes/recipes/Captum_Recipe.html //used for captum
 
 # imports for vision/data handling tasks
 import utils
@@ -33,20 +33,25 @@ from torch.optim.lr_scheduler import StepLR
 import matplotlib.pyplot as plt
 from tqdm.auto import tqdm
 
+# imports for model interpretability
+from captum.attr import IntegratedGradients, Saliency, DeepLift
+from captum.attr import visualization as viz
+
+
 
 
 
 
 
 # GLOBALS
-BATCH_SIZE = 32
+BATCH_SIZE = 128
 NUM_EPOCHS = 30
 
 # Used for debugging CUDA execution and confirming correct initialization with correct CUDA device
 print(torch.cuda.is_available())
 DEVICE = torch.device('cuda' if torch.cuda.is_available() else 'cpu')
-#print(torch.cuda.current_device())
-#print(torch.cuda.get_device_name(0))
+print(torch.cuda.current_device())
+print(torch.cuda.get_device_name(0))
 
 
 def visualize_dataset(train_loader, val_loader, test_loader):
@@ -120,18 +125,18 @@ def show_batch(data_dir):
 
 def load_architecture(model, device):
     model.to(device)
-    summary(model, (3, 256, 256))
+    summary(model, (BATCH_SIZE, 3, 256, 256))
     return model
 
 
 def train_model(model, train_dir, val_dir, num_epochs, device):
     criterion = nn.CrossEntropyLoss()
-    learning_rate = 0.001  # used when not using scheduler
+    learning_rate = 0.0001  # used when not using scheduler
 
     optimizer = optim.Adam(model.parameters(), lr=learning_rate, weight_decay=1e-6)
     # optimizer = torch.optim.Adam(model.parameters(), lr=learning_rate, betas=(0.9, 0.999), eps=1e-08, weight_decay=1e-6)
 
-    scheduler = StepLR(optimizer, step_size=2, gamma=0.1) # only used for some experiments
+    scheduler = StepLR(optimizer, step_size=5, gamma=0.5) # only used for some experiments
 
     early_stopping_patience = 10
     best_val_loss = float('inf')
@@ -194,7 +199,7 @@ def train_model(model, train_dir, val_dir, num_epochs, device):
         if epoch_val_loss < best_val_loss:
             best_val_loss = epoch_val_loss
             best_epoch = epoch + 1
-            torch.save(model.state_dict(), 'best_model.pth')
+            torch.save(model.state_dict(), 'best_network_model.pth')
             early_stopping_counter = 0
             print(f'Best Metric Updated: {best_val_loss:.3f} at epoch {best_epoch}')
         else:
@@ -244,6 +249,32 @@ def plot_results(epoch_train_loss_values, epoch_val_loss_values, epoch_train_acc
     input("Press [enter] to continue.")
 
 
+def interpret_model(model, data_loader, device):
+    model.eval()
+    integrated_gradients = IntegratedGradients(model)
+
+    # Select a single batch of data
+    for images, labels in data_loader:
+        images, labels = images.to(device), labels.to(device)
+
+        # Select a single image for interpretability (e.g., the first image in the batch)
+        input_image = images[0].unsqueeze(0)  # Add batch dimension
+        label = labels[0]
+
+        # Generate attributions using Integrated Gradients
+        attributions_ig = integrated_gradients.attribute(input_image, target=label.item(), n_steps=50)
+
+        # Visualize the attributions
+        viz.visualize_image_attr(
+            attr=attributions_ig.squeeze().cpu().permute(1, 2, 0).detach().numpy(),
+            original_image=input_image.squeeze().cpu().permute(1, 2, 0).detach().numpy(),
+            method="heat_map",
+            sign="absolute_value",
+            title="Model Interpretability"
+        )
+        break  # Process only one image for visualization
+
+
 def test_model(model, test_dir, device, criterion):
     print("Testing model now...")
     model.eval()
@@ -276,7 +307,7 @@ def main():
 
     # Visualizes our Dataset - For debugging/confirmation
     visualize_dataset(utils.train_loader, utils.val_loader, utils.test_loader)
-    show_batch(utils.train_loader)
+    #show_batch(utils.train_loader)
 
     # Instantiates our ResNet18 Model and performs model tasks
     weights = ResNet18_Weights.DEFAULT
@@ -288,12 +319,16 @@ def main():
     plot_results(epoch_train_loss_values, epoch_val_loss_values, epoch_train_acc_values, epoch_val_acc_values)
 
     # Testing the model
-    model.load_state_dict(torch.load('best_model.pth'))
+    model.load_state_dict(torch.load('best_network_model.pth'))
     loss = nn.CrossEntropyLoss()
     test_model(model, utils.test_loader, DEVICE, loss)
+
+    # Model Interpretability
+    interpret_model(model, test_loader, DEVICE)
 
     input("Press Enter to close program and close plotted data/images...")
 
 
 if __name__ == '__main__':
     main()
+
