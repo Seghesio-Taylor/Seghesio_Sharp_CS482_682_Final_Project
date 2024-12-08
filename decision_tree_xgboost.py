@@ -15,20 +15,17 @@
 # above.
 
 import pandas as pd
-from sklearn.tree import DecisionTreeClassifier
+import numpy as np
 
 import matplotlib.pyplot as plt
 
-from sklearn.metrics import accuracy_score
-
-
-import numpy as np
 import xgboost as xgb
-from xgboost import XGBClassifier
 import utils
-from utils import get_loaders
-
 import torch
+
+from sklearn.tree import DecisionTreeClassifier
+from sklearn.metrics import accuracy_score, precision_recall_fscore_support
+
 
 # GLOBALS
 BATCH_SIZE = 128
@@ -60,19 +57,18 @@ class MyXGBDecisionTree:
             'eval_metric': 'mlogloss',
             'tree_method': 'hist',
             'device': device,
-            'learning_rate': 0.1,
-            'max_depth': 4,
-            'reg_alpha': 0.1,
-            'reg_lambda': 1.0
+            'learning_rate': 0.01,
+            'max_depth': 6,
+            'reg_alpha': 0.5,
+            'reg_lambda': 3.0
         }
 
-        self.model = xgb.train(params, train_data, num_boost_round=100)
-        #self.model.fit(X_train, y_train)
-
+        self.model = xgb.train(params, train_data, num_boost_round=400)
         train_predictions = self.model.predict(train_data)
         train_accuracy = accuracy_score(y_train, train_predictions)
+        train_precision, train_recall, train_f1, train_support = precision_recall_fscore_support(y_train, train_predictions, average=None)
 
-        return train_accuracy
+        return train_accuracy, train_precision, train_recall, train_f1, train_support
 
     def evaluate_model(self, dataloader):
         X_test, y_test = [], []
@@ -88,27 +84,39 @@ class MyXGBDecisionTree:
 
         predictions = self.model.predict(test_data)
         accuracy = accuracy_score(y_test, predictions)
+        precision, recall, f1, support = precision_recall_fscore_support(y_test, predictions, average=None)
 
-        return accuracy
+        return accuracy, precision, recall, f1, support
 
     def plot_tree(self, num_tree=0):
-        #plt.figure(figsize=(40, 20))
         xgb.plot_tree(self.model, num_trees=num_tree)
         plt.show()
 
 
+def metrics_table(precision, recall, f1, support, classes):
+    metrics = pd.DataFrame({
+        'Class': classes, 'Precision': precision, 'Recall': recall, 'F1-Score': f1, 'Support': support})
+    print(metrics)
+
+
 if __name__ == '__main__':
     train_loader, val_loader, test_loader = utils.get_loaders("dataset", "extracted_dataset", BATCH_SIZE)
-
     classifier = MyXGBDecisionTree(train_loader=train_loader, val_loader=val_loader, test_loader=test_loader)
+    classes = ['glioma tumor', 'meningioma tumor', 'pituitary tumor', 'no tumor']
 
-    train_acc = classifier.train()
-    print("Training Accuracy:", train_acc)
+    train_acc, train_precision, train_recall, train_f1, train_support = classifier.train()
+    print("\nTraining Metrics:")
+    print("Training Accuracy:", train_acc*100)
+    metrics_table(train_precision, train_recall, train_f1, train_support, classes)
 
-    val_acc = classifier.evaluate_model(val_loader)
-    print("Validation Accuracy:", val_acc)
+    val_acc, val_precision, val_recall, val_f1, val_support = classifier.evaluate_model(val_loader)
+    print("\nValidation Metrics:")
+    print("Validation Accuracy:", val_acc*100)
+    metrics_table(val_precision, val_recall, val_f1, val_support, classes)
 
-    test_acc = classifier.evaluate_model(test_loader)
-    print("Test Accuracy:", test_acc)
+    test_acc, test_precision, test_recall, test_f1, test_support = classifier.evaluate_model(test_loader)
+    print("\nTest Metrics:")
+    print("Test Accuracy:", test_acc*100)
+    metrics_table(test_precision, test_recall, test_f1, test_support, classes)
 
     classifier.plot_tree()
