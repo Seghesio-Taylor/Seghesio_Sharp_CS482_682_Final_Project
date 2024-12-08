@@ -1,3 +1,14 @@
+# Authors: Taylor Seghesio & Garrett Sharp
+# Organization: UNR CSE
+# Course: CS 482
+# date_Updated: 02DEC2024
+
+# Acknowledgments: much of this code was written with the help of provided resources from UNR CS 482 course by Dr. Ankita
+# Also used the following sources:
+# pandas.pydata.org/docs/user_guide/index.html#user-guide
+# matplotlib.org/stable/tutorials/pyplot.html
+# scikit-learn.org/dev/modules/generated/sklearn.metrics.accuracy_score.html
+
 import pandas as pd
 import torch
 import matplotlib.pyplot as plt
@@ -8,6 +19,7 @@ from sklearn.metrics import accuracy_score, confusion_matrix, classification_rep
 from sklearn.preprocessing import StandardScaler
 import numpy as np
 from torchvision.utils import make_grid  # Import make_grid
+from sklearn.decomposition import PCA
 
 import utils
 from utils import transforms, ImageFolder, DataLoader, random_split, os, get_loaders
@@ -110,7 +122,11 @@ def show_batch(data_loader):
     plt.pause(0.001)
     input("Press [enter] to continue.")
 
-def train_model(train_loader, val_loader):
+def train_model(train_loader, val_loader, n_components=50):
+    """
+    Train a logistic regression model with PCA for dimensionality reduction.
+    """
+    print("Preparing training data...")
     # Prepare the data
     X_train, y_train = [], []
     for images, labels in train_loader:
@@ -132,17 +148,28 @@ def train_model(train_loader, val_loader):
     X_val = np.array(X_val)
     y_val = np.array(y_val)
     
+    print("Standardizing the data...")
     # Standardize the data
     scaler = StandardScaler()
     X_train = scaler.fit_transform(X_train)
     X_val = scaler.transform(X_val)
     
+    print("Applying PCA for dimensionality reduction...")
+    # Apply PCA for dimensionality reduction
+    pca = PCA(n_components=n_components)
+    X_train_pca = pca.fit_transform(X_train)
+    X_val_pca = pca.transform(X_val)
+    
+    print(f"PCA reduced dimensions to: {X_train_pca.shape[1]}")
+    
+    print("Training the logistic regression model...")
     # Train the logistic regression model
     model = LogisticRegression(max_iter=1000)
-    model.fit(X_train, y_train)
+    model.fit(X_train_pca, y_train)
     
+    print("Validating the model...")
     # Validate the model
-    y_val_pred = model.predict(X_val)
+    y_val_pred = model.predict(X_val_pca)
     val_accuracy = accuracy_score(y_val, y_val_pred)
     print(f'Validation Accuracy: {val_accuracy:.3f}')
     
@@ -154,9 +181,13 @@ def train_model(train_loader, val_loader):
     plot_classification_report(cr)
     plot_confusion_matrix(cm, classes=['glioma', 'meningioma', 'pituitary', 'normal'])
     
-    return model, scaler
+    return model, scaler, pca
 
-def test_model(model, scaler, test_loader):
+def test_model(model, scaler, pca, test_loader):
+    """
+    Test the trained logistic regression model with PCA on test data.
+    """
+    print("Preparing test data...")
     # Prepare the test data
     X_test, y_test = [], []
     for images, labels in test_loader:
@@ -169,11 +200,17 @@ def test_model(model, scaler, test_loader):
     X_test = np.array(X_test)
     y_test = np.array(y_test)
     
+    print("Standardizing the test data...")
     # Standardize the data
     X_test = scaler.transform(X_test)
     
+    print("Applying PCA to test data...")
+    # Apply PCA
+    X_test_pca = pca.transform(X_test)
+    
+    print("Testing the model...")
     # Test the model
-    y_test_pred = model.predict(X_test)
+    y_test_pred = model.predict(X_test_pca)
     test_accuracy = accuracy_score(y_test, y_test_pred)
     print(f'Test Accuracy: {test_accuracy:.3f}')
     
@@ -186,18 +223,24 @@ def test_model(model, scaler, test_loader):
     plot_confusion_matrix(cm, classes=['glioma', 'meningioma', 'pituitary', 'normal'])
 
 def main():
+    print("Loading dataset...")
     # Handles our Dataset
     train_loader, val_loader, test_loader = utils.get_loaders("dataset", "extracted_dataset", BATCH_SIZE)
 
+    print("Visualizing dataset...")
     # Visualizes our Dataset - For debugging/confirmation
     visualize_dataset(train_loader, val_loader, test_loader)
     show_batch(train_loader)
 
+    print("Training model...")
     # Train the model
-    model, scaler = train_model(train_loader, val_loader)
+    model, scaler, pca = train_model(train_loader, val_loader, n_components=50)
 
+    print("Testing model...")
     # Test the model
-    test_model(model, scaler, test_loader)
+    test_model(model, scaler, pca, test_loader)
+
+    input("Press Enter to close program and close plotted data/images...")
 
 if __name__ == '__main__':
     BATCH_SIZE = 128
