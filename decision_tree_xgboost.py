@@ -63,6 +63,7 @@ class MyXGBDecisionTree:
             'reg_lambda': 3.0
         }
 
+        print("Training XGBTree...")
         self.model = xgb.train(params, train_data, num_boost_round=400)
         train_predictions = self.model.predict(train_data)
         train_accuracy = accuracy_score(y_train, train_predictions)
@@ -82,6 +83,11 @@ class MyXGBDecisionTree:
 
         test_data = xgb.DMatrix(X_test)
 
+        if dataloader == val_loader:
+            print("\nEvaluating model...")
+        else:
+            print("\nTesting model...")
+
         predictions = self.model.predict(test_data)
         accuracy = accuracy_score(y_test, predictions)
         precision, recall, f1, support = precision_recall_fscore_support(y_test, predictions, average=None)
@@ -94,8 +100,7 @@ class MyXGBDecisionTree:
 
 
 def metrics_table(precision, recall, f1, support, classes):
-    metrics = pd.DataFrame({
-        'Class': classes, 'Precision': precision, 'Recall': recall, 'F1-Score': f1, 'Support': support})
+    metrics = pd.DataFrame({'Class': classes, 'Precision': precision, 'Recall': recall, 'F1-Score': f1, 'Support': support})
     print(metrics)
 
 
