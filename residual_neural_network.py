@@ -17,35 +17,31 @@
 
 # imports for vision/data handling tasks
 import utils
-from utils import transforms, ImageFolder, DataLoader, random_split, os, get_loaders
-
-import torchvision.models as models
-from torchvision.models import ResNet18_Weights
-from torchvision.utils import make_grid
+import os
+import pandas as pd
 
 # imports for neural network
 import torch
 from torch import nn, optim
 from torchinfo import summary
 from torch.optim.lr_scheduler import StepLR
+import torchvision.models as models
+from torchvision.models import ResNet18_Weights
 
 # imports for visualizations
 import matplotlib.pyplot as plt
 from tqdm.auto import tqdm
+from sklearn.metrics import precision_recall_fscore_support, accuracy_score
 
 # imports for model interpretability
 from captum.attr import IntegratedGradients, Saliency, DeepLift
 from captum.attr import visualization as viz
 
-
-
-
-
-
-
 # GLOBALS
-BATCH_SIZE = 128
+BATCH_SIZE = 256
 NUM_EPOCHS = 30
+LEARNING_RATE = 0.0001
+CLASSES = ['glioma tumor', 'meningioma tumor', 'pituitary tumor', 'no tumor']
 
 # Used for debugging CUDA execution and confirming correct initialization with correct CUDA device
 print(torch.cuda.is_available())
@@ -111,18 +107,6 @@ def visualize_dataset(train_loader, val_loader, test_loader):
     print('Total test normal images:', test_normal)
 
 
-def show_batch(data_dir):
-    for images, labels in data_dir:
-        fig, ax = plt.subplots(figsize=(12, 9))
-        ax.set_xticks([])
-        ax.set_yticks([])
-        ax.imshow(make_grid(images, nrow=8).permute(1, 2, 0))
-        break
-
-    plt.pause(0.001)
-    input("Press [enter] to continue.")
-
-
 def load_architecture(model, device):
     model.to(device)
     summary(model, (BATCH_SIZE, 3, 256, 256))
@@ -131,12 +115,9 @@ def load_architecture(model, device):
 
 def train_model(model, train_dir, val_dir, num_epochs, device):
     criterion = nn.CrossEntropyLoss()
-    learning_rate = 0.0001  # used when not using scheduler
+    optimizer = torch.optim.Adam(model.parameters(), lr=LEARNING_RATE, betas=(0.9, 0.999), eps=1e-08, weight_decay=1e-3)
 
-    optimizer = optim.Adam(model.parameters(), lr=learning_rate, weight_decay=1e-6)
-    # optimizer = torch.optim.Adam(model.parameters(), lr=learning_rate, betas=(0.9, 0.999), eps=1e-08, weight_decay=1e-6)
-
-    scheduler = StepLR(optimizer, step_size=5, gamma=0.5) # only used for some experiments
+    scheduler = StepLR(optimizer, step_size=5, gamma=0.5)
 
     early_stopping_patience = 10
     best_val_loss = float('inf')
@@ -151,7 +132,7 @@ def train_model(model, train_dir, val_dir, num_epochs, device):
     for epoch in range(num_epochs):
         print(f'\nRunning epoch {epoch + 1}/{num_epochs}')
         model.train()
-        train_losses, train_accuracies = [], []
+        train_losses, train_accuracies, train_preds, train_labels = [], [], [], []
 
         with tqdm(total=len(train_dir), desc=f'Epoch {epoch + 1}', unit='batch', leave=False) as pbar:
             for images, labels in train_dir:
@@ -165,10 +146,12 @@ def train_model(model, train_dir, val_dir, num_epochs, device):
                 acc = (outputs.argmax(dim=1) == labels).float().mean().item()
                 train_losses.append(loss.item())
                 train_accuracies.append(acc)
+                train_preds.extend(outputs.argmax(dim=1).cpu().numpy())
+                train_labels.extend(labels.cpu().numpy())
 
                 pbar.update(1)
 
-        scheduler.step()  # only used if step scheduler is enabled
+        scheduler.step()
 
         epoch_train_loss = sum(train_losses) / len(train_losses)
         epoch_train_acc = sum(train_accuracies) / len(train_accuracies)
@@ -176,7 +159,7 @@ def train_model(model, train_dir, val_dir, num_epochs, device):
         epoch_train_acc_values.append(epoch_train_acc)
 
         model.eval()
-        val_losses, val_accuracies = [], []
+        val_losses, val_accuracies, val_preds, val_labels = [], [], [], []
         with torch.no_grad():
             for images, labels in val_dir:
                 images, labels = images.to(device), labels.to(device)
@@ -186,6 +169,8 @@ def train_model(model, train_dir, val_dir, num_epochs, device):
 
                 acc = (outputs.argmax(dim=1) == labels).float().mean().item()
                 val_accuracies.append(acc)
+                val_preds.extend(outputs.argmax(dim=1).cpu().numpy())
+                val_labels.extend(labels.cpu().numpy())
 
         epoch_val_loss = sum(val_losses) / len(val_losses)
         epoch_val_acc = sum(val_accuracies) / len(val_accuracies)
@@ -211,14 +196,29 @@ def train_model(model, train_dir, val_dir, num_epochs, device):
             break
 
     print(f'Finished Training. Best Validation Loss: {best_val_loss:.3f} achieved at Epoch {best_epoch}')
+
+    train_precision, train_recall, train_f1, train_support = calculate_metrics(train_preds, train_labels)
+    best_training_acc = epoch_train_acc_values[epoch_train_acc_values.index(max(epoch_train_acc_values))]
+    best_training_loss = epoch_train_loss_values[epoch_train_loss_values.index(min(epoch_train_loss_values))]
+    print("\nTraining Metrics:")
+    print(f"Best Training Accuracy Achieved: {best_training_acc * 100}%")
+    print(f"Best Training Loss Achieved: {best_training_loss}")
+    metrics_table(train_precision, train_recall, train_f1, train_support, CLASSES)
+
+    val_precision, val_recall, val_f1, val_support = calculate_metrics(val_preds, val_labels)
+    best_val_acc = epoch_val_acc_values[epoch_val_acc_values.index(max(epoch_val_acc_values))]
+    print("\nValidation Metrics:")
+    print(f"Validation Accuracy Achieved: {best_val_acc * 100}%")
+    print(f"Validation Loss Achieved: {best_val_loss}")
+    metrics_table(val_precision, val_recall, val_f1, val_support, CLASSES)
+
     return epoch_train_loss_values, epoch_val_loss_values, epoch_train_acc_values, epoch_val_acc_values
 
 
 def plot_results(epoch_train_loss_values, epoch_val_loss_values, epoch_train_acc_values, epoch_val_acc_values):
-    # Plot results
     plt.figure(figsize=(12, 6))
 
-    # Plot loss
+    # plotting loss
     plt.subplot(1, 2, 1)
     plt.title("Loss")
     x_train = [i + 1 for i in range(len(epoch_train_loss_values))]
@@ -231,7 +231,7 @@ def plot_results(epoch_train_loss_values, epoch_val_loss_values, epoch_train_acc
     plt.ylabel("Loss")
     plt.legend()
 
-    # Plot accuracy
+    # plotting accuracy
     plt.subplot(1, 2, 2)
     plt.title("Accuracy")
     x_train_acc = [i + 1 for i in range(len(epoch_train_acc_values))]
@@ -253,18 +253,14 @@ def interpret_model(model, data_loader, device):
     model.eval()
     integrated_gradients = IntegratedGradients(model)
 
-    # Select a single batch of data
     for images, labels in data_loader:
         images, labels = images.to(device), labels.to(device)
 
-        # Select a single image for interpretability (e.g., the first image in the batch)
-        input_image = images[0].unsqueeze(0)  # Add batch dimension
+        input_image = images[0].unsqueeze(0)
         label = labels[0]
 
-        # Generate attributions using Integrated Gradients
         attributions_ig = integrated_gradients.attribute(input_image, target=label.item(), n_steps=50)
 
-        # Visualize the attributions
         viz.visualize_image_attr(
             attr=attributions_ig.squeeze().cpu().permute(1, 2, 0).detach().numpy(),
             original_image=input_image.squeeze().cpu().permute(1, 2, 0).detach().numpy(),
@@ -272,13 +268,15 @@ def interpret_model(model, data_loader, device):
             sign="absolute_value",
             title="Model Interpretability"
         )
-        break  # Process only one image for visualization
+        break
+    input("Press [enter] to continue.")
 
 
 def test_model(model, test_dir, device, criterion):
     print("Testing model now...")
     model.eval()
     total_accuracy, total_test_loss = 0.0, 0.0
+    test_preds, test_labels = [], []
     num_batches = len(test_dir)
 
     with torch.no_grad():
@@ -292,24 +290,34 @@ def test_model(model, test_dir, device, criterion):
 
                 total_test_loss += loss.item()
                 total_accuracy += accuracy.item()
+                test_preds.extend(outputs.argmax(dim=1).cpu().numpy())
+                test_labels.extend(labels.cpu().numpy())
 
                 pbar.update(1)
 
     avg_loss = total_test_loss / num_batches
     avg_accuracy = total_accuracy / num_batches
 
-    print(f'Test Accuracy: {avg_accuracy:.3f}, Test Loss: {avg_loss:.3f}')
+    test_precision, test_recall, test_f1, test_support = calculate_metrics(test_preds, test_labels)
+    print("\nTest Metrics:")
+    print(f"Test Accuracy Achieved: {avg_accuracy * 100}%")
+    print(f"Test Loss Achieved: {avg_loss}")
+    metrics_table(test_precision, test_recall, test_f1, test_support, CLASSES)
+
+
+def calculate_metrics(preds, labels):
+    precision, recall, f1, support = precision_recall_fscore_support(labels, preds, average=None)
+    return precision, recall, f1, support
+
+
+def metrics_table(precision, recall, f1, support, CLASSES):
+    metrics = pd.DataFrame({'Class': CLASSES, 'Precision': precision, 'Recall': recall, 'F1-Score': f1, 'Support': support})
+    print(metrics)
 
 
 def main():
-    # Handles our Dataset
     train_loader, val_loader, test_loader = utils.get_loaders("dataset", "extracted_dataset", BATCH_SIZE)
-
-    # Visualizes our Dataset - For debugging/confirmation
     visualize_dataset(utils.train_loader, utils.val_loader, utils.test_loader)
-    #show_batch(utils.train_loader)
-
-    # Instantiates our ResNet18 Model and performs model tasks
     weights = ResNet18_Weights.DEFAULT
     model = models.resnet18(weights=weights)
     model.fc = nn.Linear(model.fc.in_features, 4)
@@ -319,7 +327,7 @@ def main():
     plot_results(epoch_train_loss_values, epoch_val_loss_values, epoch_train_acc_values, epoch_val_acc_values)
 
     # Testing the model
-    model.load_state_dict(torch.load('best_network_model.pth'))
+    model.load_state_dict(torch.load('best_network_model.pth', weights_only=True))
     loss = nn.CrossEntropyLoss()
     test_model(model, utils.test_loader, DEVICE, loss)
 
@@ -331,4 +339,3 @@ def main():
 
 if __name__ == '__main__':
     main()
-
