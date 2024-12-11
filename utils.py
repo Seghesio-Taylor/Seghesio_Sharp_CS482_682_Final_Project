@@ -3,6 +3,13 @@
 # Course: CS 682
 # date_Updated: 29NOV2024
 
+# Acknowledgments: Much of this code was written with the help of provided resources from UNR CS 682 course by Dr. Ankita
+# Shukla, and the course textbook: Artificial Intelligence: A Modern Approach by Stuart Russel and Peter Norvig. My
+# ability to finish the program was performed from the combined resources provided in the course and the sources listed
+# above. Much of the implemented code in utils.py was provided from previous experience, resources and research
+# conducted in UNR CS 687 course with Dr. Tavakkoli; specifically with zip file data extraction as previously used in 
+# my research graduate project in deep learning.
+
 # imports for data extraction tasks
 import os
 import zipfile
@@ -46,8 +53,8 @@ def prepare_data(extracted_data, batch_size):
     train_transform = transforms.Compose([
         transforms.RandomResizedCrop(224),
         transforms.RandomHorizontalFlip(0.5),
-        transforms.RandomRotation(10),
-        transforms.ColorJitter(),
+        transforms.RandomRotation(degrees=30),
+        transforms.ColorJitter(brightness=0.2, contrast=0.2, saturation=0.2, hue=0.1),
         transforms.ToTensor(),
         transforms.Normalize(mean=[0.485, 0.456, 0.406], std=[0.229, 0.224, 0.225]),
     ])
