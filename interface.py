@@ -1,3 +1,9 @@
+# Authors: Taylor Seghesio & Garrett Sharp
+# Organization: UNR CSE
+# Course: CS 482/ CS 682
+# date_Updated: 08DEC2024
+
+
 import decision_tree_xgboost as dt
 import logistic_regression as logreg
 import residual_neural_network as rnn
