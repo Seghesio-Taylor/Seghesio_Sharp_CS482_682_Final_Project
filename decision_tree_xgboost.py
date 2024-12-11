@@ -1,9 +1,9 @@
 # Authors: Taylor Seghesio & Garrett Sharp
 # Date: 05DEC2024
-# Course: CS 682
+# Course: CS 482/ CS 682
 # Final Project
 
-# sources
+# Acknowledgements:
 # https://pandas.pydata.org/docs/user_guide/index.html#user-guide
 # https://matplotlib.org/stable/tutorials/pyplot.html
 # https://scikit-learn.org/dev/modules/generated/sklearn.metrics.accuracy_score.html
@@ -40,6 +40,7 @@ class MyXGBDecisionTree:
 
     def train(self):
         X_train, y_train = [], []
+        X_val, y_val = [], []
 
         for inputs, labels in self.train_loader:
             X_train.append(inputs.view(inputs.size(0), -1).numpy())
@@ -48,6 +49,14 @@ class MyXGBDecisionTree:
         X_train = np.vstack(X_train)
         y_train = np.hstack(y_train)
         train_data = xgb.DMatrix(X_train, label=y_train)
+
+        for inputs, labels in self.val_loader:
+            X_val.append(inputs.view(inputs.size(0), -1).numpy())
+            y_val.append(labels.numpy())
+
+        X_val = np.vstack(X_val)
+        y_val = np.hstack(y_val)
+        val_data = xgb.DMatrix(X_val, label=y_val)
 
         device = 'cuda' if torch.cuda.is_available() else 'cpu'
 
@@ -64,7 +73,7 @@ class MyXGBDecisionTree:
         }
 
         print("Training XGBTree...")
-        self.model = xgb.train(params, train_data, num_boost_round=400)
+        self.model = xgb.train(params, train_data, num_boost_round=200, evals=[(val_data, 'validation')], early_stopping_rounds=10)
         train_predictions = self.model.predict(train_data)
         train_accuracy = accuracy_score(y_train, train_predictions)
         train_precision, train_recall, train_f1, train_support = precision_recall_fscore_support(y_train, train_predictions, average=None)
@@ -83,7 +92,7 @@ class MyXGBDecisionTree:
 
         test_data = xgb.DMatrix(X_test)
 
-        if dataloader == val_loader:
+        if dataloader == self.val_loader:
             print("\nEvaluating model...")
         else:
             print("\nTesting model...")
@@ -104,7 +113,7 @@ def metrics_table(precision, recall, f1, support, classes):
     print(metrics)
 
 
-if __name__ == '__main__':
+def main():
     train_loader, val_loader, test_loader = utils.get_loaders("dataset", "extracted_dataset", BATCH_SIZE)
     classifier = MyXGBDecisionTree(train_loader=train_loader, val_loader=val_loader, test_loader=test_loader)
     classes = ['glioma tumor', 'meningioma tumor', 'pituitary tumor', 'no tumor']
@@ -125,3 +134,7 @@ if __name__ == '__main__':
     metrics_table(test_precision, test_recall, test_f1, test_support, classes)
 
     classifier.plot_tree()
+
+
+if __name__ == '__main__':
+    main()
