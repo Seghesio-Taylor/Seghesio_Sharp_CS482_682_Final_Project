@@ -1,13 +1,17 @@
 # Authors: Taylor Seghesio & Garrett Sharp
 # Organization: UNR CSE
-# Course: CS 482
+# Course: CS 482/ CS 682
 # date_Updated: 02DEC2024
 
-# Acknowledgments: much of this code was written with the help of provided resources from UNR CS 482 course by Dr. Ankita
-# Also used the following sources:
+# Acknowledgements:
 # pandas.pydata.org/docs/user_guide/index.html#user-guide
 # matplotlib.org/stable/tutorials/pyplot.html
 # scikit-learn.org/dev/modules/generated/sklearn.metrics.accuracy_score.html
+
+# Acknowledgments: Much of this code was written with the help of provided resources from UNR CS 682 course by Dr. Ankita
+# Shukla, and the course textbook: Artificial Intelligence: A Modern Approach by Stuart Russel and Peter Norvig. My
+# ability to finish the program was performed from the combined resources provided in the course and the sources listed
+# above.
 
 import pandas as pd
 import torch
@@ -24,6 +28,9 @@ from sklearn.decomposition import PCA
 import utils
 from utils import transforms, ImageFolder, DataLoader, random_split, os, get_loaders
 
+# GLOBALS
+BATCH_SIZE = 128
+
 def plot_confusion_matrix(cm, classes, title='Confusion Matrix', cmap=plt.cm.Blues):
     plt.figure(figsize=(10, 7))
     sns.heatmap(cm, annot=True, fmt='d', cmap=cmap, xticklabels=classes, yticklabels=classes)
@@ -32,13 +39,15 @@ def plot_confusion_matrix(cm, classes, title='Confusion Matrix', cmap=plt.cm.Blu
     plt.xlabel('Predicted label')
     plt.show()
 
+
 def plot_classification_report(cr, title='Classification Report', cmap=plt.cm.Blues):
     lines = cr.split('\n')
     classes = []
     plot_data = []
     for line in lines[2: (len(lines) - 3)]:
         row_data = line.split()
-        if len(row_data) < 2 or row_data[0] in ['accuracy', 'macro', 'weighted']:  # Skip lines that do not contain the expected data
+        if len(row_data) < 2 or row_data[0] in ['accuracy', 'macro',
+                                                'weighted']:  # Skip lines that do not contain the expected data
             continue
         classes.append(row_data[0])
         plot_data.append([float(x) for x in row_data[1: len(row_data) - 1]])
@@ -54,6 +63,7 @@ def plot_classification_report(cr, title='Classification Report', cmap=plt.cm.Bl
     plt.ylabel('Classes')
     plt.xlabel('Metrics')
     plt.show()
+
 
 def visualize_dataset(train_loader, val_loader, test_loader):
     def get_data(data_loader):
@@ -111,6 +121,7 @@ def visualize_dataset(train_loader, val_loader, test_loader):
     print('Total test pituitary tumor images:', test_pituitary)
     print('Total test normal images:', test_normal)
 
+
 def show_batch(data_loader):
     for images, labels in data_loader:
         fig, ax = plt.subplots(figsize=(12, 9))
@@ -121,6 +132,7 @@ def show_batch(data_loader):
 
     plt.pause(0.001)
     input("Press [enter] to continue.")
+
 
 def train_model(train_loader, val_loader, n_components=50):
     """
@@ -134,54 +146,67 @@ def train_model(train_loader, val_loader, n_components=50):
         labels = labels.numpy()
         X_train.extend(images)
         y_train.extend(labels)
-    
+
     X_val, y_val = [], []
     for images, labels in val_loader:
         images = images.view(images.size(0), -1).numpy()  # Flatten the images
         labels = labels.numpy()
         X_val.extend(images)
         y_val.extend(labels)
-    
+
     # Convert to numpy arrays
     X_train = np.array(X_train)
     y_train = np.array(y_train)
     X_val = np.array(X_val)
     y_val = np.array(y_val)
-    
+
     print("Standardizing the data...")
     # Standardize the data
     scaler = StandardScaler()
     X_train = scaler.fit_transform(X_train)
     X_val = scaler.transform(X_val)
-    
+
     print("Applying PCA for dimensionality reduction...")
     # Apply PCA for dimensionality reduction
     pca = PCA(n_components=n_components)
     X_train_pca = pca.fit_transform(X_train)
     X_val_pca = pca.transform(X_val)
-    
+
     print(f"PCA reduced dimensions to: {X_train_pca.shape[1]}")
-    
+
     print("Training the logistic regression model...")
     # Train the logistic regression model
     model = LogisticRegression(max_iter=1000)
     model.fit(X_train_pca, y_train)
-    
+
+    y_train_pred = model.predict(X_train_pca)
+    train_accuracy = accuracy_score(y_train, y_train_pred)
+    print(f'Training Accuracy: {train_accuracy:.3f}')
+
+    cr_train = classification_report(y_train, y_train_pred)
+    cm_train = confusion_matrix(y_train, y_train_pred)
+    print("Training Classification Report:\n", cr_train)
+    print("Training Confusion Matrix:\n", cm_train)
+
+    plot_classification_report(cr_train, title='Training Classification Report')
+    plot_confusion_matrix(cm_train, classes=['glioma', 'meningioma', 'pituitary', 'normal'])
+
     print("Validating the model...")
     # Validate the model
     y_val_pred = model.predict(X_val_pca)
     val_accuracy = accuracy_score(y_val, y_val_pred)
     print(f'Validation Accuracy: {val_accuracy:.3f}')
-    
-    cr = classification_report(y_val, y_val_pred)
-    cm = confusion_matrix(y_val, y_val_pred)
-    print("Classification Report:\n", cr)
-    print("Confusion Matrix:\n", cm)
-    
-    plot_classification_report(cr)
-    plot_confusion_matrix(cm, classes=['glioma', 'meningioma', 'pituitary', 'normal'])
-    
+
+    cr_val = classification_report(y_val, y_val_pred)
+    cm_val = confusion_matrix(y_val, y_val_pred)
+    print("Validation Classification Report:\n", cr_val)
+    print("Validation Confusion Matrix:\n", cm_val)
+
+    plot_classification_report(cr_val)
+    plot_confusion_matrix(cm_val, classes=['glioma', 'meningioma', 'pituitary', 'normal'])
+
     return model, scaler, pca
+
 
 def test_model(model, scaler, pca, test_loader):
     """
@@ -195,32 +220,33 @@ def test_model(model, scaler, pca, test_loader):
         labels = labels.numpy()
         X_test.extend(images)
         y_test.extend(labels)
-    
+
     # Convert to numpy arrays
     X_test = np.array(X_test)
     y_test = np.array(y_test)
-    
+
     print("Standardizing the test data...")
     # Standardize the data
     X_test = scaler.transform(X_test)
-    
+
     print("Applying PCA to test data...")
     # Apply PCA
     X_test_pca = pca.transform(X_test)
-    
+
     print("Testing the model...")
     # Test the model
     y_test_pred = model.predict(X_test_pca)
     test_accuracy = accuracy_score(y_test, y_test_pred)
     print(f'Test Accuracy: {test_accuracy:.3f}')
-    
-    cr = classification_report(y_test, y_test_pred)
-    cm = confusion_matrix(y_test, y_test_pred)
-    print("Classification Report:\n", cr)
-    print("Confusion Matrix:\n", cm)
-    
-    plot_classification_report(cr)
-    plot_confusion_matrix(cm, classes=['glioma', 'meningioma', 'pituitary', 'normal'])
+
+    cr_test = classification_report(y_test, y_test_pred)
+    cm_test = confusion_matrix(y_test, y_test_pred)
+    print("Testing Classification Report:\n", cr_test)
+    print("Testing Confusion Matrix:\n", cm_test)
+
+    plot_classification_report(cr_test)
+    plot_confusion_matrix(cm_test, classes=['glioma', 'meningioma', 'pituitary', 'normal'])
+
 
 def main():
     print("Loading dataset...")
@@ -242,6 +268,6 @@ def main():
 
     input("Press Enter to close program and close plotted data/images...")
 
+
 if __name__ == '__main__':
-    BATCH_SIZE = 128
     main()
