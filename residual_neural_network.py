@@ -1,9 +1,9 @@
 # Authors: Taylor Seghesio & Garrett Sharp
 # Organization: UNR CSE
-# Course: CS 682
+# Course: CS 482/ CS 682
 # date_Updated: 30NOV2024
 
-# Acknowledgements: (see final project report deliverable for documented citations)
+# Acknowledgements:
 # [1]  https://pytorch.org/vision/main/models/generated/torchvision.models.resnet18.html ### resnet pre built model
 # [2]  https://www.programiz.com/python-programming/methods/built-in/iter  ###used for iter
 # [3]  https://pytorch.org/tutorials/beginner/basics/data_tutorial.html  ###data_loader/pytorch
@@ -14,6 +14,11 @@
 # [8]  https://blog.paperspace.com/how-to-maximize-gpu-utilization-by-finding-the-right-batch-size/ ### helped with accuracy and algorithm performance
 # [9]  https://www.linkedin.com/advice/3/how-can-you-improve-neural-network-performance-xkrxe#:~:text=Selecting%20the%20number%20of%20epochs,it%20based%20on%20validation%20performance. ###help with accuracy and curve performance
 # [10] https://pytorch.org/tutorials/recipes/recipes/Captum_Recipe.html //used for captum
+
+# Acknowledgments: Much of this code was written with the help of provided resources from UNR CS 682 course by Dr. Ankita
+# Shukla, and the course textbook: Artificial Intelligence: A Modern Approach by Stuart Russel and Peter Norvig. My
+# ability to finish the program was performed from the combined resources provided in the course and the sources listed
+# above.
 
 # imports for vision/data handling tasks
 import utils
@@ -39,7 +44,7 @@ from captum.attr import visualization as viz
 
 # GLOBALS
 BATCH_SIZE = 256
-NUM_EPOCHS = 30
+NUM_EPOCHS = 50
 LEARNING_RATE = 0.0001
 CLASSES = ['glioma tumor', 'meningioma tumor', 'pituitary tumor', 'no tumor']
 
