@@ -9,6 +9,9 @@
 # scikit-learn.org/dev/modules/generated/sklearn.metrics.accuracy_score.html
 # pytorch.org/tutorials/beginner/basics/data_tutorial.html
 # www.w3schools.com/python/numpy/default.asp
+# builtin.com/machine-learning/pca-in-python
+# scikit-learn.org/1.5/modules/generated/sklearn.linear_model.LogisticRegression.html
+# machinelearningmastery.com/building-a-logistic-regression-classifier-in-pytorch/
 
 # Acknowledgments: Much of this code was written with the help of provided resources from UNR CS 682 course by Dr. Ankita
 # Shukla, and the course textbook: Artificial Intelligence: A Modern Approach by Stuart Russel and Peter Norvig. My
