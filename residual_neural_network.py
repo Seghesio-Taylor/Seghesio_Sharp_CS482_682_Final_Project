@@ -4,16 +4,23 @@
 # date_Updated: 30NOV2024
 
 # Acknowledgements:
-# [1]  https://pytorch.org/vision/main/models/generated/torchvision.models.resnet18.html ### resnet pre built model
-# [2]  https://www.programiz.com/python-programming/methods/built-in/iter  ###used for iter
-# [3]  https://pytorch.org/tutorials/beginner/basics/data_tutorial.html  ###data_loader/pytorch
-# [4]  https://www.geeksforgeeks.org/matplotlib-pyplot-imshow-in-python/ ###imshow in python
-# [5]  https://pytorch.org/vision/stable/transforms.html ### image augmentation
-# [6]  https://stackoverflow.com/questions/28269157/plotting-in-a-non-blocking-way-with-matplotlib ### using plt.pause instead of block=False
-# [7]  https://medium.com/@harshit4084/track-your-loop-using-tqdm-7-ways-progress-bars-in-python-make-things-easier-fcbbb9233f24 ### prog bar
-# [8]  https://blog.paperspace.com/how-to-maximize-gpu-utilization-by-finding-the-right-batch-size/ ### helped with accuracy and algorithm performance
-# [9]  https://www.linkedin.com/advice/3/how-can-you-improve-neural-network-performance-xkrxe#:~:text=Selecting%20the%20number%20of%20epochs,it%20based%20on%20validation%20performance. ###help with accuracy and curve performance
-# [10] https://pytorch.org/tutorials/recipes/recipes/Captum_Recipe.html //used for captum
+# https://pytorch.org/vision/main/models/generated/torchvision.models.resnet18.html ### resnet pre built model
+# https://www.programiz.com/python-programming/methods/built-in/iter  ###used for iter
+# https://pytorch.org/tutorials/beginner/basics/data_tutorial.html  ###data_loader/pytorch
+# https://pytorch.org/docs/stable/generated/torch.optim.lr_scheduler.StepLR.html ### Step scheduler
+# https://pandas.pydata.org/docs/ ### pandas
+# https://stackoverflow.com/questions/28269157/plotting-in-a-non-blocking-way-with-matplotlib ### using plt.pause instead of block=False
+# https://medium.com/@harshit4084/track-your-loop-using-tqdm-7-ways-progress-bars-in-python-make-things-easier-fcbbb9233f24 ### prog bar
+# https://blog.paperspace.com/how-to-maximize-gpu-utilization-by-finding-the-right-batch-size/ ### helped with accuracy and algorithm performance
+# https://www.linkedin.com/advice/3/how-can-you-improve-neural-network-performance-xkrxe#:~:text=Selecting%20the%20number%20of%20epochs,it%20based%20on%20validation%20performance. ###help with accuracy and curve performance
+# https://pytorch.org/tutorials/recipes/recipes/Captum_Recipe.html ### Captum
+# https://captum.ai/api/saliency.html ### Captum
+# https://captum.ai/api/deep_lift.html ### Captum
+# https://captum.ai/docs/extension/integrated_gradients ### Captum
+# https://captum.ai/api/utilities.html ### Captum Visuals
+# https://pytorch.org/docs/stable/generated/torch.optim.Adam.html ### Adam optim
+# https://scikit-learn.org/dev/modules/generated/sklearn.metrics.precision_recall_fscore_support.html ### Sklearn prec_recall_supp
+# https://scikit-learn.org/1.5/modules/generated/sklearn.metrics.accuracy_score.html ### accuracy score
 
 # Acknowledgments: Much of this code was written with the help of provided resources from UNR CS 682 course by Dr. Ankita
 # Shukla, and the course textbook: Artificial Intelligence: A Modern Approach by Stuart Russel and Peter Norvig. My
@@ -51,8 +58,6 @@ CLASSES = ['glioma tumor', 'meningioma tumor', 'pituitary tumor', 'no tumor']
 # Used for debugging CUDA execution and confirming correct initialization with correct CUDA device
 print(torch.cuda.is_available())
 DEVICE = torch.device('cuda' if torch.cuda.is_available() else 'cpu')
-print(torch.cuda.current_device())
-print(torch.cuda.get_device_name(0))
 
 
 def visualize_dataset(train_loader, val_loader, test_loader):
