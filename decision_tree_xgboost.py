@@ -4,26 +4,28 @@
 # Final Project
 
 # Acknowledgements:
-# https://pandas.pydata.org/docs/user_guide/index.html#user-guide
-# https://matplotlib.org/stable/tutorials/pyplot.html
-# https://scikit-learn.org/dev/modules/generated/sklearn.metrics.accuracy_score.html
-# https://xgboost.readthedocs.io/en/stable/python/python_intro.html
+# https://pandas.pydata.org/docs/user_guide/index.html#user-guide ### pandas
+# https://matplotlib.org/stable/tutorials/pyplot.html ### plots
+# https://machinelearningmastery.com/visualize-gradient-boosting-decision-trees-xgboost-python/ ### XGBoost visual
+# https://xgboost.readthedocs.io/en/stable/python/python_intro.html ### XGBoost
+# https://numpy.org/devdocs/user/index.html#user ###Numpy
+# https://scikit-learn.org/dev/modules/generated/sklearn.metrics.precision_recall_fscore_support.html ### Sklearn prec_recall_supp
+# https://scikit-learn.org/1.5/modules/generated/sklearn.metrics.accuracy_score.html ### accuracy score
 
 # Acknowledgments: Much of this code was written with the help of provided resources from UNR CS 682 course by Dr. Ankita
 # Shukla, and the course textbook: Artificial Intelligence: A Modern Approach by Stuart Russel and Peter Norvig. My
 # ability to finish the program was performed from the combined resources provided in the course and the sources listed
 # above.
 
+# data handling
 import pandas as pd
 import numpy as np
-
-import matplotlib.pyplot as plt
-
+# Boosting and model
 import xgboost as xgb
 import utils
 import torch
-
-from sklearn.tree import DecisionTreeClassifier
+# metrics and visuals
+import matplotlib.pyplot as plt
 from sklearn.metrics import accuracy_score, precision_recall_fscore_support
 
 
