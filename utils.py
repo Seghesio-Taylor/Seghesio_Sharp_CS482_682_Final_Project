@@ -3,11 +3,18 @@
 # Course: CS 682
 # date_Updated: 29NOV2024
 
+# sources
+# https://pytorch.org/vision/main/generated/torchvision.datasets.ImageFolder.html
+# https://docs.python.org/3/library/zipfile.html
+# https://pytorch.org/vision/0.20/transforms.html
+# https://pytorch.org/tutorials/beginner/basics/data_tutorial.html
+# https://pytorch.org/docs/stable/data.html
+
 # Acknowledgments: Much of this code was written with the help of provided resources from UNR CS 682 course by Dr. Ankita
 # Shukla, and the course textbook: Artificial Intelligence: A Modern Approach by Stuart Russel and Peter Norvig. My
 # ability to finish the program was performed from the combined resources provided in the course and the sources listed
 # above. Much of the implemented code in utils.py was provided from previous experience, resources and research
-# conducted in UNR CS 687 course with Dr. Tavakkoli; specifically with zip file data extraction as previously used in 
+# conducted in UNR CS 687 course with Dr. Tavakkoli; specifically with zip file data extraction as previously used in
 # my research graduate project in deep learning.
 
 # imports for data extraction tasks
